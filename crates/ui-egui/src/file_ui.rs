@@ -1505,7 +1505,8 @@ mod tests {
     fn app() -> (PhotocraftApp, egui::Context) {
         let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
         // Print lists this printer and does not ask the spooler.
-        app.session.printer_source = Some(Arc::new(|| vec![craft_print::Printer { name: "Test printer".into(), default: true, two_sided: None }]));
+        app.session.printer_source =
+            Some(Arc::new(|| vec![craft_print::Printer { name: "Test printer".into(), description: String::new(), default: true, two_sided: None }]));
         app.run("file.new", json!({"width": 120, "height": 80, "name": "web"})).unwrap();
         (app, egui::Context::default())
     }
@@ -1936,7 +1937,8 @@ mod tests {
             PhotocraftApp::setup_context(&cc.egui_ctx, Default::default());
             let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services { file_dialog: Some(show), ..Default::default() });
             // Print lists this printer and does not ask the spooler.
-            app.session.printer_source = Some(Arc::new(|| vec![craft_print::Printer { name: "Test printer".into(), default: true, two_sided: None }]));
+            app.session.printer_source =
+                Some(Arc::new(|| vec![craft_print::Printer { name: "Test printer".into(), description: String::new(), default: true, two_sided: None }]));
             app
         });
         h.state_mut().run("file.new", json!({"width": 120, "height": 80, "name": "poster"})).unwrap();

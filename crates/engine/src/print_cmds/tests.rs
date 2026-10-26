@@ -262,8 +262,8 @@ fn native_rgb_route_preserves_pdf_only_color_and_page_content() {
 fn test_printers() -> PrinterSource {
     std::sync::Arc::new(|| {
         vec![
-            craft_print::Printer { name: "Studio".into(), default: false, two_sided: None },
-            craft_print::Printer { name: "Office".into(), default: true, two_sided: Some(true) },
+            craft_print::Printer { name: "Studio".into(), description: String::new(), default: false, two_sided: None },
+            craft_print::Printer { name: "Office".into(), description: String::new(), default: true, two_sided: Some(true) },
         ]
     })
 }
@@ -738,7 +738,7 @@ fn printer_listings_enter_the_spooler_one_thread_at_a_time() {
                     most.fetch_max(now, Ordering::SeqCst);
                     std::thread::sleep(std::time::Duration::from_millis(5));
                     inside.fetch_sub(1, Ordering::SeqCst);
-                    vec![craft_print::Printer { name: "Office".into(), default: true, two_sided: None }]
+                    vec![craft_print::Printer { name: "Office".into(), description: String::new(), default: true, two_sided: None }]
                 }));
                 start.wait();
                 for _ in 0..3 {
@@ -799,7 +799,7 @@ fn listings_without_waiting_return_the_last_lists_while_the_spooler_is_busy() {
     let mut s = Session::new();
     s.printer_source = Some(Arc::new(move || {
         counted.fetch_add(1, Ordering::SeqCst);
-        vec![craft_print::Printer { name: "Office".into(), default: true, two_sided: None }]
+        vec![craft_print::Printer { name: "Office".into(), description: String::new(), default: true, two_sided: None }]
     }));
     let (held_tx, held) = mpsc::channel();
     let (release, released_rx) = mpsc::channel::<()>();
@@ -836,7 +836,9 @@ fn listings_without_waiting_return_the_last_lists_while_the_spooler_is_busy() {
 #[test]
 fn listings_without_waiting_skip_the_lists_of_another_stand_in() {
     use std::sync::{Arc, mpsc};
-    let one = |name: &'static str| -> PrinterSource { Arc::new(move || vec![craft_print::Printer { name: name.into(), default: true, two_sided: None }]) };
+    let one = |name: &'static str| -> PrinterSource {
+        Arc::new(move || vec![craft_print::Printer { name: name.into(), description: String::new(), default: true, two_sided: None }])
+    };
     let mut other = Session::new();
     other.printer_source = Some(one("Elsewhere"));
     other.execute("file.printers", json!({})).unwrap();

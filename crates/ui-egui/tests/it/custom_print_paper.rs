@@ -7,8 +7,9 @@ use serde_json::{Map, Value, json};
 fn app() -> (PhotocraftApp, u64) {
     let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), photocraft_ui_egui::Services::default());
     // Print lists this printer and does not ask the spooler.
-    app.session.printer_source =
-        Some(std::sync::Arc::new(|| vec![craft_print::Printer { name: "Test native printer".into(), default: true, two_sided: None }]));
+    app.session.printer_source = Some(std::sync::Arc::new(|| {
+        vec![craft_print::Printer { name: "Test native printer".into(), description: String::new(), default: true, two_sided: None }]
+    }));
     app.run("file.new", json!({"width": 120, "height": 80, "name": "Custom paper"})).unwrap();
     let id = open_print(&mut app);
     assert_no_system_listing();
