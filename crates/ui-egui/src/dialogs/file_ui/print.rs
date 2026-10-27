@@ -83,6 +83,7 @@ fn take_printer_lists(app: &mut PhotocraftApp, f: &mut Map<String, Value>, fresh
             let fallback = list.iter().find(|p| p.default).or(list.first()).map(|p| p.name.clone()).unwrap_or_default();
             f.insert("printer".into(), json!(fallback));
             f.remove("printerSettings");
+            f.remove("__driverPageInitialized");
         }
     }
 }
@@ -661,6 +662,32 @@ pub(super) fn print_confirm(app: &mut PhotocraftApp, f: &Map<String, Value>) -> 
         print_status(app, &r);
     }
     Ok(r)
+}
+
+#[cfg(all(test, windows))]
+#[test]
+fn printer_retry_invalidates_geometry_only_when_the_printer_changes() {
+    let mut app = PhotocraftApp::new(photocraft_engine::Session::new(), crate::Services::default());
+    app.session.printer_source =
+        Some(Arc::new(|| vec![craft_print::Printer { name: "Replacement printer".into(), default: true, two_sided: None, description: String::new() }]));
+    let mut fields = json!({
+        "printer": "Old printer", "printerSettings": "0011",
+        "__printerListingPending": true, "__driverPageInitialized": true,
+        "paper": [100.0, 200.0], "printable": [1.0, 2.0, 98.0, 196.0]
+    })
+    .as_object()
+    .unwrap()
+    .clone();
+    photocraft_engine::print_cmds::with_spooler(|| {
+        refresh_printers(&mut app, &mut fields);
+        assert_eq!(fields["printer"], "Replacement printer");
+        assert!(!fields.contains_key("printerSettings"));
+        assert!(!fields.contains_key("__printerListingPending"));
+        assert!(!fields.contains_key("__driverPageInitialized"));
+        fields.insert("__driverPageInitialized".into(), json!(true));
+        refresh_printers(&mut app, &mut fields);
+        assert_eq!(fields["__driverPageInitialized"], true);
+    });
 }
 
 pub(crate) fn print_status(app: &mut PhotocraftApp, r: &Value) {
