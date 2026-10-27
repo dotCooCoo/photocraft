@@ -36,6 +36,17 @@ fn busy_driver_page_requests_a_retry_without_input() {
 #[cfg(windows)]
 #[test]
 fn print_dialog_keeps_saved_settings_when_the_cached_printer_list_is_empty() {
+    check_saved_settings_with_cached_printers(false);
+}
+
+#[cfg(windows)]
+#[test]
+fn print_dialog_keeps_saved_settings_when_the_cached_printer_list_is_stale() {
+    check_saved_settings_with_cached_printers(true);
+}
+
+#[cfg(windows)]
+fn check_saved_settings_with_cached_printers(stale: bool) {
     use std::sync::atomic::{AtomicBool, Ordering};
     let (mut app, ctx) = app();
     let available = Arc::new(AtomicBool::new(false));
@@ -43,6 +54,8 @@ fn print_dialog_keeps_saved_settings_when_the_cached_printer_list_is_empty() {
     app.session.printer_source = Some(Arc::new(move || {
         if listed.load(Ordering::SeqCst) {
             vec![craft_print::Printer { name: "Saved printer".into(), default: true, two_sided: None, description: String::new() }]
+        } else if stale {
+            vec![craft_print::Printer { name: "Old printer".into(), default: true, two_sided: None, description: String::new() }]
         } else {
             Vec::new()
         }
@@ -56,7 +69,7 @@ fn print_dialog_keeps_saved_settings_when_the_cached_printer_list_is_empty() {
     let (release, released_rx) = std::sync::mpsc::channel::<()>();
     let holder = std::thread::spawn(move || {
         photocraft_engine::print_cmds::with_spooler(|| {
-            assert!(photocraft_engine::print_cmds::rgb_printers(&lister).unwrap().is_empty());
+            assert_eq!(photocraft_engine::print_cmds::rgb_printers(&lister).unwrap().len(), usize::from(stale));
             available.store(true, Ordering::SeqCst);
             held_tx.send(()).unwrap();
             let _ = released_rx.recv_timeout(std::time::Duration::from_secs(5));

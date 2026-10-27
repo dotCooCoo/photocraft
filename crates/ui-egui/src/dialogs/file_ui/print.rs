@@ -65,21 +65,21 @@ pub fn open_print(app: &mut PhotocraftApp) -> u64 {
 }
 
 fn refresh_printers(app: &mut PhotocraftApp, f: &mut Map<String, Value>) {
-    if photocraft_engine::print_cmds::try_with_spooler(|| take_printer_lists(app, f)).is_some() {
+    if photocraft_engine::print_cmds::try_with_spooler(|| take_printer_lists(app, f, true)).is_some() {
         f.remove("__printerListingPending");
     } else {
-        take_printer_lists(app, f);
+        take_printer_lists(app, f, false);
         f.insert("__printerListingPending".into(), json!(true));
     }
 }
 
-fn take_printer_lists(app: &mut PhotocraftApp, f: &mut Map<String, Value>) {
+fn take_printer_lists(app: &mut PhotocraftApp, f: &mut Map<String, Value>, fresh: bool) {
     let printers = photocraft_engine::print_cmds::printers_without_waiting(&mut app.session);
     f.insert("__systemPrinters".into(), printers["printers"].clone());
     if let Ok(list) = photocraft_engine::print_cmds::rgb_printers_without_waiting(&app.session) {
         f.insert("__printers".into(), json!(list.iter().map(|p| p.name.clone()).collect::<Vec<_>>()));
         let known = |n: &str| list.iter().any(|p| p.name == n);
-        if !list.is_empty() && !known(&s(f, "printer", "")) {
+        if fresh && !list.is_empty() && !known(&s(f, "printer", "")) {
             let fallback = list.iter().find(|p| p.default).or(list.first()).map(|p| p.name.clone()).unwrap_or_default();
             f.insert("printer".into(), json!(fallback));
             f.remove("printerSettings");
