@@ -1267,7 +1267,7 @@ fn print_one_copy(s: &mut Session, p: &Value) -> Result<Value> {
     let mut q = last_print(s).unwrap_or_else(|| json!({}));
     // A printer remembered from an earlier session may be gone: then the default takes the job,
     // as the Print dialog falls back (#7410). A list that can't be read decides nothing.
-    if let Ok(listed) = system_printers(s, &q) {
+    if let Some(Ok(listed)) = try_with_spooler(|| system_printers(s, &q)) {
         let names: Vec<&str> = listed["printers"].as_array().into_iter().flatten().filter_map(|p| p["name"].as_str()).collect();
         drop_vanished_printer(&mut q, &names);
     }
