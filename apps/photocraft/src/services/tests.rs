@@ -724,6 +724,20 @@ fn text_that_is_not_a_drawing_pastes_nothing() {
 }
 
 #[test]
+fn svg_clipboard_text_accepts_a_long_xml_preamble() {
+    let padding = "x".repeat(8192);
+    for prefix in [format!("<!--{padding}-->"), format!("<?xml version=\"1.0\"?>\n<!--{padding}-->"), format!("<?drawing {padding}?>")] {
+        let text = format!("{prefix}{HALF_RED}");
+        let img = from_text(&text).expect("SVG after the XML preamble");
+        assert_eq!((img.0, img.1), (40, 20));
+        assert_eq!(pixel(&img, 5, 10), [255, 0, 0, 255]);
+        assert_eq!(pixel(&img, 30, 10), [0, 0, 0, 0]);
+    }
+    assert!(from_text(&format!("<!--{padding}<svg/>--><not-svg/>")).is_none());
+    assert!(from_text(&format!("<!--{padding}--><svg><g></svg>")).is_none());
+}
+
+#[test]
 fn a_drawing_past_the_pixel_limit_pastes_scaled_down() {
     let wide = r##"<svg xmlns="http://www.w3.org/2000/svg" width="20000" height="10000"><rect width="20000" height="10000" fill="#0000ff"/></svg>"##;
     let img = from_text(wide).expect("scaled down, not dropped");

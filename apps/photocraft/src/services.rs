@@ -553,7 +553,7 @@ const MAX_CLIPBOARD_SVG_BYTES: u64 = photocraft_io::svg::MAX_INFLATED_BYTES;
 /// as RGBA8. `None` for text that isn't SVG, markup longer than [`MAX_CLIPBOARD_SVG_BYTES`], and
 /// markup that doesn't parse.
 fn image_from_svg_text(text: &str) -> Option<(u32, u32, Vec<u8>)> {
-    if u64::try_from(text.len()).ok()? > MAX_CLIPBOARD_SVG_BYTES || !photocraft_io::svg::is_svg(text.as_bytes()) {
+    if u64::try_from(text.len()).ok()? > MAX_CLIPBOARD_SVG_BYTES || !text.trim_start_matches('\u{feff}').trim_start().starts_with('<') {
         return None;
     }
     crate::crash_guard::guard("Paste", || photocraft_io::svg::rasterize_rgba8(text.as_bytes()).map_err(|e| e.to_string())).ok()
