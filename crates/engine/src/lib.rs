@@ -18,12 +18,14 @@ pub mod display_color;
 pub mod doc_path;
 pub mod filters;
 pub mod filters_ext;
+mod group_options;
 pub mod guide_layout;
 pub mod hidden_target;
 pub mod inspect;
 pub mod installed_profiles;
 pub mod jobs;
 pub mod kys;
+pub mod layer_place;
 pub mod layer_style;
 pub mod link_watch;
 pub mod new_layer;
@@ -88,6 +90,7 @@ pub use cmd::file_cmds;
 pub use cmd::fill_cmds;
 pub use cmd::fill_key_cmds;
 pub use cmd::float_cmds;
+pub use cmd::font_library_cmds;
 use cmd::frame_cmds;
 pub use cmd::fx_view_cmds;
 pub use cmd::fx_visibility_cmds;
@@ -96,6 +99,7 @@ pub use cmd::gradient_fill_cmds;
 pub use cmd::group_view_cmds;
 pub use cmd::history_cmds;
 pub use cmd::history_menu_cmds;
+pub use cmd::history_options_cmds;
 pub use cmd::history_select_cmds;
 pub use cmd::history_source_cmds;
 pub use cmd::image_cmds;
@@ -160,9 +164,9 @@ pub use cmd::web_cmds;
 use cmd::wia_cmds;
 pub use doc_state::{CopiedStyle, DocState, PRECHECKED, ToolState};
 pub use error::{EngineError, Result};
-pub(crate) use session::fix_selection;
 pub use session::move_item;
 use session::restore_target;
+pub(crate) use session::{carry_visibility, fix_selection, visibility_changes};
 
 /// The pixels of a raster layer (typically one a command just created), as an error instead
 /// of a panic if the layer has none.
@@ -273,6 +277,15 @@ pub struct Session {
     /// document, source read-only)`. The shell takes them with [`Session::take_held_open`].
     held_opens: Vec<(u64, Document, bool)>,
     next_held_open: u64,
+    /// The document before the latest [`Session::edit`] of the running command, which
+    /// [`Session::hint_damage`] checks a hint against. Set by `edit`, taken by `hint_damage`,
+    /// dropped when the command ends. Debug and test builds only.
+    #[cfg(any(test, debug_assertions))]
+    hint_before: Option<Arc<Document>>,
+    /// Damage hints that missed a tile their edit changed ([`Session::hint_damage`]): each one a
+    /// command reporting too narrow a redraw area (#4053). Counted in debug and test builds only;
+    /// tests read it.
+    pub damage_misses: usize,
 }
 
 #[cfg(test)]
