@@ -80,15 +80,19 @@ fn check_saved_settings_with_cached_printers(stale: bool) {
     let mut fields = app.ui.dialog_mut(id).unwrap().fields.clone();
     let before_retry = (fields.get("printer").cloned(), fields.get("printerSettings").cloned());
     let pending = fields.get("__printerListingPending").cloned();
+    let shown_while_pending = fields.get("__printers").cloned();
     let _ = release.send(());
     holder.join().unwrap();
     assert_eq!(pending, Some(json!(true)));
     assert_eq!(before_retry, (Some(json!("Saved printer")), Some(json!("0011"))));
+    let expected = if stale { json!(["Old printer", "Saved printer"]) } else { json!(["Saved printer"]) };
+    assert_eq!(shown_while_pending, Some(expected));
     fields.insert("dryRun".into(), json!(true));
     photocraft_engine::print_cmds::with_spooler(|| {
         ctx.run_ui(Default::default(), |ui| print_body(&mut app, ui, &mut fields, id)).textures_delta.clear();
         assert_eq!(fields["printer"], "Saved printer");
         assert_eq!(fields["printerSettings"], "0011");
+        assert_eq!(fields["__printers"], json!(["Saved printer"]));
         assert!(!fields.contains_key("__printerListingPending"));
     });
 }

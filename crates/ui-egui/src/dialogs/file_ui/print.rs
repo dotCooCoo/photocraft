@@ -77,7 +77,12 @@ fn take_printer_lists(app: &mut PhotocraftApp, f: &mut Map<String, Value>, fresh
     let printers = photocraft_engine::print_cmds::printers_without_waiting(&mut app.session);
     f.insert("__systemPrinters".into(), printers["printers"].clone());
     if let Ok(list) = photocraft_engine::print_cmds::rgb_printers_without_waiting(&app.session) {
-        f.insert("__printers".into(), json!(list.iter().map(|p| p.name.clone()).collect::<Vec<_>>()));
+        let mut names: Vec<String> = list.iter().map(|p| p.name.clone()).collect();
+        let saved = s(f, "printer", "");
+        if !fresh && !saved.is_empty() && !names.contains(&saved) {
+            names.push(saved);
+        }
+        f.insert("__printers".into(), json!(names));
         let known = |n: &str| list.iter().any(|p| p.name == n);
         if fresh && !list.is_empty() && !known(&s(f, "printer", "")) {
             let fallback = list.iter().find(|p| p.default).or(list.first()).map(|p| p.name.clone()).unwrap_or_default();
