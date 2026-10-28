@@ -1155,6 +1155,32 @@ mod cups {
         );
     }
 
+    /// A printer remembered on a named server that no longer lists it gives way to the server's
+    /// default even while another print holds the local spooler lock.
+    #[test]
+    fn print_one_copy_checks_a_named_server_while_the_spooler_is_busy() {
+        if !in_child("cmd::print_cmds::tests::cups::print_one_copy_checks_a_named_server_while_the_spooler_is_busy", &[]) {
+            return;
+        }
+        let (server, _rx) = fake_cups(&["Office"], &[], Some("Office"));
+        let mut s = session("rgb", 8);
+        s.file_menu.last_print = Some(json!({"printServer": server, "printer": "Gone"}));
+        let (held_tx, held) = mpsc::channel();
+        let (release, released) = mpsc::channel::<()>();
+        let holder = std::thread::spawn(move || {
+            with_spooler(|| {
+                held_tx.send(()).unwrap();
+                let _ = released.recv_timeout(std::time::Duration::from_secs(5));
+            });
+        });
+        held.recv().unwrap();
+        let r = s.execute("file.printOneCopy", json!({}));
+        let _ = release.send(());
+        holder.join().unwrap();
+        let r = r.unwrap();
+        assert_eq!((r["backend"].as_str(), r["spooler"].as_str()), (Some("ipp"), Some("job 42 on Office")));
+    }
+
     #[test]
     fn without_a_printer_the_app_spooler_takes_over() {
         if !in_child("cmd::print_cmds::tests::cups::without_a_printer_the_app_spooler_takes_over", &[]) {
